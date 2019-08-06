@@ -1,6 +1,8 @@
 #include "Chip8.h"
 
 #include <cstdio>
+#include <sstream>
+
 #include "misc/Log.h"
 
 
@@ -73,6 +75,35 @@ void Chip8::emulateCycle()
 	// Fetch Opcode (Opcodes are 2 bytes so merge both)
 	opcode = memory[pc] << 8 | memory[pc + 1];
 
+	//Compare first 4 bits
+	switch (opcode & 0xF000)
+	{
+	case 0x0000: //First 4 bits not enough so need to compare last 12 bits
+		switch (opcode & 0x0FFF)
+		{
+		case 0x00E0: // 0x00E0 - Clear Screen
+
+			break;
+		case 0x00EE:
+
+			break;
+
+		default: //0x0NNN - Calls RCA 1802 program at address NNN. Not necessary for most ROMs. (PROBABLY Won't be in any ROMS)
+			Log::logW("Unimplemented opcode: " + convertOpcodeToPrintableHex(opcode));
+			break;
+		}
+		break;
+
+	case 0xA000: //ANNN - Sets I to the memory address NNN.
+		I = opcode & 0x0FFF;
+		pc += 2;
+		break;
+
+	default:
+		Log::logW("Unknown opcode: " + convertOpcodeToPrintableHex(opcode));
+		break;
+	}
+	//pc += 2;
 	//Testing the render process
 	drawFlag = true;
 
@@ -163,7 +194,19 @@ unsigned char* Chip8::getScreenArray()
 	return gameScreen;
 }
 
+bool Chip8::beepThisCycle()
+{
+	return soundTimer == 1;
+}
+
 bool Chip8::isDrawFlagSet()
 {
 	return drawFlag;
+}
+
+std::string Chip8::convertOpcodeToPrintableHex(unsigned short op)
+{
+	std::stringstream ss;
+	ss << std::hex << std::showbase << op;
+	return std::string(ss.str());
 }

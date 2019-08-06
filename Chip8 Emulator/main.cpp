@@ -22,11 +22,15 @@ Chip8 c8;
 const unsigned int screenArraySize = (Chip8::WIDTH * Chip8::HEIGHT) * (4 * sizeof(unsigned char));
 unsigned char screenArray[screenArraySize];
 
-int main(int, char*[])
+int main(int argc, char* argv[])
 {
 	Log::init(false, "Richard Hancock", "Chip8 Emulator");
 
-	
+	if (argc < 2)
+	{
+		Log::logE("No ROM path passed through comand line parameters");
+		return -1;
+	}
 
 	if (!platform.initSDL())
 	{
@@ -45,7 +49,8 @@ int main(int, char*[])
 		Log::logE(SDL_GetError());
 	}
 
-	
+	//Load Program
+	c8.loadROM(argv[1]);
 
 	bool run = true;
 

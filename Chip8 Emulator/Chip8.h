@@ -19,8 +19,11 @@ public:
 	static const int HEIGHT = 32;
 
 	static const int MEMORY_SIZE = 4096;
-
-
+	
+	//Is the engine required to play a beep sound this cycle
+	bool beepThisCycle();
+	
+	//Should the engine refresh the screen this cycle
 	bool isDrawFlagSet();
 
 private:
@@ -45,4 +48,6 @@ private:
 	unsigned char key[16];
 
 	bool drawFlag;
+
+	std::string convertOpcodeToPrintableHex(unsigned short op);
 };
