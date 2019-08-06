@@ -19,6 +19,12 @@
     <Filter Include="Header Files\Misc">
       <UniqueIdentifier>{384aa16d-5f1d-4920-8d83-4826dad1ae8c}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Header Files\Input">
+      <UniqueIdentifier>{f8ad5d96-5406-4181-82b7-65a5e635822f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Input">
+      <UniqueIdentifier>{068c9730-e1c2-4952-8ee0-bde03f66b0bd}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -33,6 +39,15 @@
     <ClCompile Include="Chip8.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="input\InputManager.cpp">
+      <Filter>Source Files\Input</Filter>
+    </ClCompile>
+    <ClCompile Include="input\Controller.cpp">
+      <Filter>Source Files\Input</Filter>
+    </ClCompile>
+    <ClCompile Include="misc\Utility.cpp">
+      <Filter>Source Files\Misc</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="misc\Log.h">
@@ -46,6 +61,15 @@
     </ClInclude>
     <ClInclude Include="Chip8.h">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="input\InputManager.h">
+      <Filter>Header Files\Input</Filter>
+    </ClInclude>
+    <ClInclude Include="input\Controller.h">
+      <Filter>Header Files\Input</Filter>
+    </ClInclude>
+    <ClInclude Include="misc\Utility.h">
+      <Filter>Header Files\Misc</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

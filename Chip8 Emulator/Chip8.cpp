@@ -1,5 +1,10 @@
 #include "Chip8.h"
 
+#include <cstdio>
+#include "misc/Log.h"
+
+
+
 unsigned char chip8FontSet[80] =
 {
 	0xF0, 0x90, 0x90, 0x90, 0xF0, //0
@@ -35,7 +40,7 @@ void Chip8::reset()
 	//Clear Screen
 	for (int i = 0; i < WIDTH * HEIGHT; i++)
 	{
-		screen[i] = 0;
+		gameScreen[i] = 0;
 	}
 
 	//Clear Memory
@@ -65,11 +70,97 @@ void Chip8::reset()
 
 void Chip8::emulateCycle()
 {
-	// Fetch Opcode
-	// Decode Opcode
-	// Execute Opcode
+	// Fetch Opcode (Opcodes are 2 bytes so merge both)
+	opcode = memory[pc] << 8 | memory[pc + 1];
+
+	//Testing the render process
+	drawFlag = true;
+
+	gameScreen[1] = 1;
+	gameScreen[454] = 1;
+	gameScreen[652] = 1;
+	gameScreen[653] = 1;
+	gameScreen[654] = 1;
+	gameScreen[655] = 1;
+	gameScreen[656] = 1;
+
 
 	// Update timers
+	if (delayTimer > 0)
+		delayTimer--;
+
+	if (soundTimer > 0)
+		soundTimer--;
+}
+
+bool Chip8::loadROM(std::string path)
+{
+	FILE* programRaw = fopen(path.c_str(), "rb");
+
+	if (programRaw == nullptr)
+	{
+		fclose(programRaw);
+
+		Log::logE("Could not load requested ROM, likely a invalid path. Provided Path: " + path);
+		return false;
+	}
+
+	Log::logI("Loading ROM: " + path);
+
+	//Modified From: http://www.multigesture.net/articles/how-to-write-an-emulator-chip-8-interpreter/comment-page-1/#comments
+
+	// Check file size
+	fseek(programRaw, 0, SEEK_END);
+	long lSize = ftell(programRaw);
+	rewind(programRaw);
+	Log::logI("ROM Filesize: " + std::to_string(lSize));
+
+	// Allocate memory to contain the whole file
+	char * buffer = (char*)malloc(sizeof(char) * lSize);
+	if (buffer == NULL)
+	{
+		Log::logE("Could not allocate memory to load ROM");
+		fclose(programRaw);
+		free(buffer);
+		return false;
+	}
+
+	// Copy the file into the buffer
+	size_t result = fread(buffer, 1, lSize, programRaw);
+	if (result != (unsigned long)lSize)
+	{
+		Log::logE("Could not read ROM into buffer");
+		fclose(programRaw);
+		free(buffer);
+		return false;
+	}
+
+	// Copy buffer to Chip8 memory
+	if ((MEMORY_SIZE - 512) > lSize)
+	{
+		for (int i = 0; i < lSize; ++i)
+			memory[i + 512] = buffer[i];
+	}
+	else
+	{
+		Log::logE("ROM too big for memory");
+		fclose(programRaw);
+		free(buffer);
+		return false;
+	}
+
+	// Close file, free buffer
+	fclose(programRaw);
+	free(buffer);
+	
+	//END of copy
+
+	return true;
+}
+
+unsigned char* Chip8::getScreenArray()
+{
+	return gameScreen;
 }
 
 bool Chip8::isDrawFlagSet()

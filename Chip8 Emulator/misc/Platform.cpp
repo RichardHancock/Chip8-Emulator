@@ -33,6 +33,8 @@ bool Platform::initSDL()
 
 	bool status = true;
 
+	windowSize = Vec2(640, 320);
+
 	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_GAMECONTROLLER | SDL_INIT_HAPTIC) < 0)
 	{
 		status = false;

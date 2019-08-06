@@ -3,7 +3,7 @@
 #include <iostream>
 #include <cmath>
 
-//#include "Utility.h"
+#include <string>
 
 //Used in Other Assignments
 
@@ -78,6 +78,11 @@ public:
 		}
 
 		return Vec2(x / length, y / length);
+	}
+
+	std::string convertToString()
+	{
+		return "Vec2(" + std::to_string(x) + ", " + std::to_string(y) + ")";
 	}
 
 

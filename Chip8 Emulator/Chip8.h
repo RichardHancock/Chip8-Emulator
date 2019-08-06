@@ -1,5 +1,7 @@
 #pragma once
 
+#include <string>
+
 class Chip8
 {
 public:
@@ -8,6 +10,10 @@ public:
 	void reset();
 
 	void emulateCycle();
+
+	bool loadROM(std::string path);
+
+	unsigned char* getScreenArray();
 
 	static const int WIDTH = 64;
 	static const int HEIGHT = 32;
@@ -28,7 +34,7 @@ private:
 	unsigned short I; //Index Register
 	unsigned short pc; //Program Counter
 
-	unsigned char screen[WIDTH * HEIGHT];
+	unsigned char gameScreen[WIDTH * HEIGHT];
 
 	unsigned char delayTimer;
 	unsigned char soundTimer;
