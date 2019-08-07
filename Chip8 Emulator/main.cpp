@@ -32,6 +32,9 @@ int main(int argc, char* argv[])
 		return -1;
 	}
 
+	//Init Random
+	srand((unsigned int)time(0));
+
 	if (!platform.initSDL())
 	{
 		Log::logE("SDL Failed to initialize");
@@ -74,6 +77,13 @@ int main(int argc, char* argv[])
 
 
 		InputManager::update();
+
+		//Audio
+		if (c8.beepThisCycle())
+		{
+			//Temp until I implement a audio solution
+			Log::logD("BEEP");
+		}
 
 		//Not Perfect But need to try to keep cycle running 60 times a second
 		std::this_thread::sleep_for(std::chrono::microseconds(16600));

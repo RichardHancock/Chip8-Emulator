@@ -95,18 +95,21 @@ void Chip8::emulateCycle()
 
 		default: //0x0NNN - Calls RCA 1802 program at address NNN. Not necessary for emulators according to a few sources.
 			Log::logW("Unimplemented or Unknown opcode: " + convertOpcodeToPrintableHex(opcode));
+			pc += 2;
 			break;
 		}
 		break;
 
 	//0x1
 	case 0x1000: //1NNN - Jump to location NNN
-		pc = 0x0FFF;
+		pc = (opcode & 0x0FFF);
 		break;
 
 	//0x2
 	case 0x2000: //2NNN - Call Subroutine at NNN
-
+		stack[sp] = pc;
+		sp++;
+		pc = (opcode & 0x0FFF);
 		break;
 
 	//0x3
@@ -126,12 +129,14 @@ void Chip8::emulateCycle()
 
 	//0x6
 	case 0x6000: //6XNN - Set Vx Register to NN
-
+		(V[(opcode & 0x0F00) >> 8]) = (opcode & 0x00FF);
+		pc += 2;
 		break;
 
 	//0x7
 	case 0x7000: //7XNN - Adds NN to Vx Then Stores Result in Vx (Vx += NN)
-
+		(V[(opcode & 0x0F00) >> 8]) += (opcode & 0x00FF);
+		pc += 2;
 		break;
 
 	//0x8
@@ -139,31 +144,57 @@ void Chip8::emulateCycle()
 		switch (opcode & 0x000F)
 		{
 		case 0x0000: //8XY0 - Set Vx Register to Vy (Vx = Vy)
-			
+			(V[(opcode & 0x0F00) >> 8]) = (V[(opcode & 0x00F0) >> 4]);
+			pc += 2;
 			break;
 		case 0x0001: //8XY1 - Bitwise OR (Vx = (Vx | Vy))
-
+			(V[(opcode & 0x0F00) >> 8]) |= (V[(opcode & 0x00F0) >> 4]);
+			pc += 2;
 			break;
 		case 0x0002: //8XY2 - Bitwise AND (Vx = (Vx & Vy))
-
+			(V[(opcode & 0x0F00) >> 8]) &= (V[(opcode & 0x00F0) >> 4]);
+			pc += 2;
 			break;
 		case 0x0003: //8XY3 - Bitwise XOR (Vx = (Vx ^ Vy))
-
+			(V[(opcode & 0x0F00) >> 8]) ^= (V[(opcode & 0x00F0) >> 4]);
+			pc += 2;
 			break;
 		case 0x0004: //8XY4 - Add Vx to Vy and store in Vx (Vx += Vy). If result greater then 255 VF carry flag needs to be set
+			//Set carry flag if addition will cause a carry
+			V[0xF] = ((V[(opcode & 0x0F00) >> 8]) > (UCHAR_MAX - (V[(opcode & 0x00F0) >> 4])) ? 1 : 0);
 
+			//Perform the addition
+			(V[(opcode & 0x0F00) >> 8]) += (V[(opcode & 0x00F0) >> 4]);
+
+			pc += 2;
 			break;
 		case 0x0005: //8XY5 - Subtract Vy from Vx and store in Vx (Vx -= Vy). If Vx > Vy set VF to 1
+			//Set borrow flag if subtraction will cause a borrow
+			V[0xF] = ((V[(opcode & 0x0F00) >> 8]) > ((V[(opcode & 0x00F0) >> 4])) ? 1 : 0);
 
+			//Perform the subtraction
+			(V[(opcode & 0x0F00) >> 8]) -= (V[(opcode & 0x00F0) >> 4]);
+
+			pc += 2;
 			break;
-		case 0x0006: //8XY6 - If the least significant bit of Vx is 1, then VF is set to 1. Then Vx is divided by 2.
-
+		case 0x0006: //8XY6 - If the least significant bit of Vx is 1, then VF is set to 1. Then Vx is shifted right one.
+			V[0xF] = (V[(opcode & 0x0F00) >> 8]) >> 7;
+			V[(opcode & 0x0F00) >> 8] <<= 1;
+			pc += 2;
 			break;
 		case 0x0007: //8XY7 - Subtract Vx from Vy and store in Vx (Vx = Vy - Vx). If Vy > Vx set VF to 1
+			//Set borrow flag if subtraction will cause a borrow
+			V[0xF] = (((V[(opcode & 0x00F0) >> 4]) > (V[(opcode & 0x0F00) >> 8])) ? 1 : 0);
 
+			//Perform the subtraction
+			V[(opcode & 0x0F00) >> 8] = (V[(opcode & 0x00F0) >> 4]) - (V[(opcode & 0x0F00) >> 8]);
+
+			pc += 2;
 			break;
 		case 0x000E: //8XYE - If the most significant bit of Vx is 1, then VF is set to 1. Then Vx is multiplied by 2.
-
+			V[0xF] = (V[(opcode & 0x0F00) >> 8]) & 0x01;
+			V[(opcode & 0x0F00) >> 8] >>= 1;
+			pc += 2;
 			break;
 
 		default:
@@ -174,7 +205,7 @@ void Chip8::emulateCycle()
 
 	//0x9
 	case 0x9000: //9XY0 - Skip Next Instruction if (Vx != Vy)
-
+		pc += ((V[(opcode & 0x0F00) >> 8]) != (V[(opcode & 0x00F0) >> 4])) ? 4 : 2;
 		break;
 
 	//0xA
@@ -184,29 +215,59 @@ void Chip8::emulateCycle()
 		break;
 
 	//0xB
-	case 0xB000: //BNNN - Jump to location NNN + V0
-
+	case 0xB000: //BNNN - Jump to location V0 + NNN
+		pc = V[0x0] + (opcode & 0x0FFF);
 		break;
 
 	//0xC
-	case 0xC000: //CXNN - Generate Random Number Between 0-255, then AND with NN and store in Vx. (Vx = (rand(0-255) & NN))
-
+	case 0xC000: //CXNN - Generate Random Number Between 0-255, then AND with NN and store in Vx. (Vx = (rand(0-255) & NN)
+		
+		//TODO: Add better random number generation. Pretty Rubbish Distribution but fine for now 
+		(V[(opcode & 0x0F00) >> 8]) = (rand() % 256) & (opcode & 0x00FF);
+		
+		pc += 2;
 		break;
 
 	//0xD
 	case 0xD000: //DXYN - Draw sprite of N bytes starting at I in memory at pos (Vx, Vy). Set VF for collision event.
+	{
+		//Implementation Borrowed from http://www.multigesture.net/articles/how-to-write-an-emulator-chip-8-interpreter/
+		//We Reimplement as it
+		unsigned short x = V[(opcode & 0x0F00) >> 8];
+		unsigned short y = V[(opcode & 0x00F0) >> 4];
+		unsigned short height = opcode & 0x000F;
+		unsigned short pixel;
 
-		break;
+		V[0xF] = 0;
+		for (int yline = 0; yline < height; yline++)
+		{
+			pixel = memory[I + yline];
+			for (int xline = 0; xline < 8; xline++)
+			{
+				if ((pixel & (0x80 >> xline)) != 0)
+				{
+					if (gameScreen[(x + xline + ((y + yline) * 64))] == 1)
+						V[0xF] = 1;
+
+					gameScreen[x + xline + ((y + yline) * 64)] ^= 1;
+				}
+			}
+		}
+
+		drawFlag = true;
+		pc += 2;
+	}
+	break;
 
 	//0xE
 	case 0xE000: //First 4 bits not enough so need to compare last 8 bits
 		switch (opcode & 0x00FF)
 		{
 		case 0x009E: //EX9E - Skip Next Instruction if key[Vx] is Pressed
-
+			pc += 2; //TEMP
 			break;
 		case 0x00A1: //EXA1 - Skip Next Instruction if key[Vx] is not Pressed
-
+			pc += 2; //TEMP
 			break;
 
 		default:
@@ -220,31 +281,51 @@ void Chip8::emulateCycle()
 		switch (opcode & 0x00FF)
 		{
 		case 0x0007: //FX07 - Set Vx to delay timer value
-			
+			(V[(opcode & 0x0F00) >> 8]) = delayTimer;
+			pc += 2;
 			break;
 		case 0x000A: //FX0A - Wait for key press, value of key stored in Vx. This Blocks All Execution Until Key Press.
-
+			pc += 2; // TEMP 
 			break;
 		case 0x0015: //FX15 - Set Delay Timer to Vx
-
+			delayTimer = (V[(opcode & 0x0F00) >> 8]);
+			pc += 2;
 			break;
 		case 0x0018: //FX18 - Set Sound Timer to Vx
-
+			soundTimer = (V[(opcode & 0x0F00) >> 8]);
+			pc += 2;
 			break;
 		case 0x001E: //FX1E - Add Vx to I and store result in I
+			I += (V[(opcode & 0x0F00) >> 8]);
 
+			//Undocumented requirement for some specific games
+			//Check for overflow, if so set VF to 1
+			if (((V[(opcode & 0x0F00) >> 8]) + I) > USHRT_MAX)
+			{
+				Log::logD("Overflow on 0xFX1E instruction, should check logic");
+				V[0xF] = 1;
+			}
+
+			pc += 2;
 			break;
 		case 0x0029: //FX29 - Set I to the memory location of sprite for character stored in Vx
-
+			I = (V[(opcode & 0x0F00) >> 8]) * 5; //Each character is 5 bytes in size and stored at start of memory
+			pc += 2;
 			break;
 		case 0x0033: //FX33 - Store the Binary-Coded Decimal representation of Vx in memory at locations I, I+1, I+2
-
+			memory[I] = V[(opcode & 0x0F00) >> 8] / 100;
+			memory[I + 1] = (V[(opcode & 0x0F00) >> 8] / 10) % 10;
+			memory[I + 2] = (V[(opcode & 0x0F00) >> 8] % 100) % 10;
+			//Implementation by TJA 
+			pc += 2;
 			break;
 		case 0x0055: //FX55 - Dump values from registry (V0 - Vx) in memory at address I and onwards. 'I' should not be modified
-
+			Log::logW("Unimplemented opcode: " + convertOpcodeToPrintableHex(opcode));
+			pc += 2;
 			break;
 		case 0x0065: //FX065 - Load values from registry (V0 - Vx) in memory at address I and onwards. 'I' should not be modified
-
+			Log::logW("Unimplemented opcode: " + convertOpcodeToPrintableHex(opcode));
+			pc += 2;
 			break;
 
 		default:
@@ -256,7 +337,8 @@ void Chip8::emulateCycle()
 		Log::logW("Unknown opcode: " + convertOpcodeToPrintableHex(opcode));
 		break;
 	}
-	//pc += 2;
+	
+
 	//Testing the render process
 	/*drawFlag = true;
 
