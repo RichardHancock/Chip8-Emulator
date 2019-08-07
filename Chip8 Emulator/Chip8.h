@@ -26,6 +26,9 @@ public:
 	//Should the engine refresh the screen this cycle
 	bool isDrawFlagSet();
 
+	//Confirm that the draw call has been performed so the draw flag can be unset
+	void acknowledgeDrawFlag();
+
 private:
 	unsigned short opcode;
 
@@ -50,4 +53,6 @@ private:
 	bool drawFlag;
 
 	std::string convertOpcodeToPrintableHex(unsigned short op);
+
+	void clearScreen();
 };

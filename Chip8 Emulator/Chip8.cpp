@@ -5,7 +5,9 @@
 
 #include "misc/Log.h"
 
-
+const int Chip8::WIDTH;
+const int Chip8::HEIGHT;
+const int Chip8::MEMORY_SIZE;
 
 unsigned char chip8FontSet[80] =
 {
@@ -40,10 +42,8 @@ void Chip8::reset()
 	sp = 0;
 
 	//Clear Screen
-	for (int i = 0; i < WIDTH * HEIGHT; i++)
-	{
-		gameScreen[i] = 0;
-	}
+	clearScreen();
+	drawFlag = true;
 
 	//Clear Memory
 	for (int i = 0; i < MEMORY_SIZE; i++)
@@ -83,10 +83,14 @@ void Chip8::emulateCycle()
 		switch (opcode & 0x0FFF)
 		{
 		case 0x00E0: // 00E0 - Clear Screen
-
+			clearScreen();
+			drawFlag = true;
+			pc += 2;
 			break;
 		case 0x00EE: // 00EE - Return from Subroutine
-
+			sp--; //Switch pointer to most recent location in the stack
+			pc = stack[sp]; // Reset Program Counter to its original location
+			pc += 2;
 			break;
 
 		default: //0x0NNN - Calls RCA 1802 program at address NNN. Not necessary for emulators according to a few sources.
@@ -97,7 +101,7 @@ void Chip8::emulateCycle()
 
 	//0x1
 	case 0x1000: //1NNN - Jump to location NNN
-		//pc = 
+		pc = 0x0FFF;
 		break;
 
 	//0x2
@@ -107,17 +111,17 @@ void Chip8::emulateCycle()
 
 	//0x3
 	case 0x3000: //3XNN - Skip Next Instruction if (Vx == NN)
-
+		pc += ((V[(opcode & 0x0F00) >> 8]) == (opcode & 0x00FF)) ? 4 : 2;
 		break;
 
 	//0x4
 	case 0x4000: //4XNN - Skip Next Instruction if (Vx != NN)
-
+		pc += ((V[(opcode & 0x0F00) >> 8]) != (opcode & 0x00FF)) ? 4 : 2;
 		break;
 
 	//0x5
 	case 0x5000: //5XY0 - Skip Next Instruction if (Vx == Vy)
-
+		pc += ((V[(opcode & 0x0F00) >> 8]) == (V[(opcode & 0x00F0) >> 4])) ? 4 : 2;
 		break;
 
 	//0x6
@@ -254,7 +258,7 @@ void Chip8::emulateCycle()
 	}
 	//pc += 2;
 	//Testing the render process
-	drawFlag = true;
+	/*drawFlag = true;
 
 	gameScreen[1] = 1;
 	gameScreen[454] = 1;
@@ -262,7 +266,7 @@ void Chip8::emulateCycle()
 	gameScreen[653] = 1;
 	gameScreen[654] = 1;
 	gameScreen[655] = 1;
-	gameScreen[656] = 1;
+	gameScreen[656] = 1;*/
 
 
 	// Update timers
@@ -353,9 +357,22 @@ bool Chip8::isDrawFlagSet()
 	return drawFlag;
 }
 
+void Chip8::acknowledgeDrawFlag()
+{
+	drawFlag = false;
+}
+
 std::string Chip8::convertOpcodeToPrintableHex(unsigned short op)
 {
 	std::stringstream ss;
 	ss << std::hex << std::showbase << op;
 	return std::string(ss.str());
+}
+
+void Chip8::clearScreen()
+{
+	for (int i = 0; i < WIDTH * HEIGHT; i++)
+	{
+		gameScreen[i] = 0;
+	}
 }
