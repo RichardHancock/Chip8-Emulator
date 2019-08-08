@@ -54,7 +54,7 @@ void Chip8::reset()
 	//Clear Stack/Keys/Registers
 	for (int i = 0; i < 16; i++)
 	{
-		V[i] = key[i] = 0;
+		V[i] = keys[i] = 0;
 		// Needs to be seperate as diff type, don't really want to add casts for a one time op.
 		stack[i] = 0; 
 	}
@@ -232,7 +232,7 @@ void Chip8::emulateCycle()
 	case 0xD000: //DXYN - Draw sprite of N bytes starting at I in memory at pos (Vx, Vy). Set VF for collision event.
 	{
 		//Implementation Borrowed from http://www.multigesture.net/articles/how-to-write-an-emulator-chip-8-interpreter/
-		//We Reimplement as it
+		//Will Reimplement as it doesn't wrap around sprites (maybe unless the ROMS im using don't support that)
 		unsigned short x = V[(opcode & 0x0F00) >> 8];
 		unsigned short y = V[(opcode & 0x00F0) >> 4];
 		unsigned short height = opcode & 0x000F;
@@ -264,10 +264,10 @@ void Chip8::emulateCycle()
 		switch (opcode & 0x00FF)
 		{
 		case 0x009E: //EX9E - Skip Next Instruction if key[Vx] is Pressed
-			pc += 2; //TEMP
+			pc += (keys[(V[(opcode & 0x0F00) >> 8])] ? 4 : 2);
 			break;
 		case 0x00A1: //EXA1 - Skip Next Instruction if key[Vx] is not Pressed
-			pc += 2; //TEMP
+			pc += (keys[(V[(opcode & 0x0F00) >> 8])] ? 2 : 4);
 			break;
 
 		default:
@@ -285,7 +285,24 @@ void Chip8::emulateCycle()
 			pc += 2;
 			break;
 		case 0x000A: //FX0A - Wait for key press, value of key stored in Vx. This Blocks All Execution Until Key Press.
-			pc += 2; // TEMP 
+		{
+			bool keyPressed = false;
+
+			//This will fetch the highest value key that is pressed (Not sure if I should accept the first I see or last).
+			for (int i = 0; i < 16; i++)
+			{
+				if (keys[i])
+				{
+					V[(opcode & 0x0F00) >> 8] = i;
+					keyPressed = true;
+				}
+			}
+
+			if (!keyPressed)
+				return;
+				
+			pc += 2;
+		}
 			break;
 		case 0x0015: //FX15 - Set Delay Timer to Vx
 			delayTimer = (V[(opcode & 0x0F00) >> 8]);
@@ -319,12 +336,30 @@ void Chip8::emulateCycle()
 			//Implementation by TJA 
 			pc += 2;
 			break;
-		case 0x0055: //FX55 - Dump values from registry (V0 - Vx) in memory at address I and onwards. 'I' should not be modified
-			Log::logW("Unimplemented opcode: " + convertOpcodeToPrintableHex(opcode));
+		case 0x0055: //FX55 - Dump values from registry (V0 - Vx) to memory at address I and onwards. 'I' should not be modified
+			for (int i = 0; i <= ((opcode & 0x0F00) >> 8); i++)
+			{
+				memory[I + i] = V[i];
+			}
+
+			/*
+			// On the original interpreter, when the operation is done, I = I + X + 1.
+			I += ((opcode & 0x0F00) >> 8) + 1;
+			pc += 2;
+			*/
 			pc += 2;
 			break;
-		case 0x0065: //FX065 - Load values from registry (V0 - Vx) in memory at address I and onwards. 'I' should not be modified
-			Log::logW("Unimplemented opcode: " + convertOpcodeToPrintableHex(opcode));
+		case 0x0065: //FX65 - Load values to registry (V0 - Vx) from memory at address I and onwards. 'I' should not be modified
+			for (int i = 0; i <= ((opcode & 0x0F00) >> 8); i++)
+			{
+				V[i] = memory[I + i];
+			}
+
+			/*
+			// On the original interpreter, when the operation is done, I = I + X + 1.
+			I += ((opcode & 0x0F00) >> 8) + 1;
+			pc += 2;
+			*/
 			pc += 2;
 			break;
 
@@ -338,18 +373,6 @@ void Chip8::emulateCycle()
 		break;
 	}
 	
-
-	//Testing the render process
-	/*drawFlag = true;
-
-	gameScreen[1] = 1;
-	gameScreen[454] = 1;
-	gameScreen[652] = 1;
-	gameScreen[653] = 1;
-	gameScreen[654] = 1;
-	gameScreen[655] = 1;
-	gameScreen[656] = 1;*/
-
 
 	// Update timers
 	if (delayTimer > 0)
@@ -442,6 +465,21 @@ bool Chip8::isDrawFlagSet()
 void Chip8::acknowledgeDrawFlag()
 {
 	drawFlag = false;
+}
+
+void Chip8::setKeyDown(char keyIndex)
+{
+	keys[keyIndex] = true;
+}
+
+void Chip8::setKeyUp(char keyIndex)
+{
+	keys[keyIndex] = false;
+}
+
+void Chip8::setKeyState(char keyIndex, bool state)
+{
+	keys[keyIndex] = state;
 }
 
 std::string Chip8::convertOpcodeToPrintableHex(unsigned short op)

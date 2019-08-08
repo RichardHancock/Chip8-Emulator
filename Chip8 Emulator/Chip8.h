@@ -29,6 +29,12 @@ public:
 	//Confirm that the draw call has been performed so the draw flag can be unset
 	void acknowledgeDrawFlag();
 
+	void setKeyDown(char keyIndex);
+
+	void setKeyUp(char keyIndex);
+
+	void setKeyState(char keyIndex, bool state);
+
 private:
 	unsigned short opcode;
 
@@ -48,7 +54,7 @@ private:
 	unsigned short stack[16];
 	unsigned short sp; // Stack Pointer
 
-	unsigned char key[16];
+	bool keys[16];
 
 	bool drawFlag;
 

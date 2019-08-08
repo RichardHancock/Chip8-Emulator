@@ -12,6 +12,7 @@ void render();
 
 bool eventHandler();
 
+void passThroughInput();
 
 Platform platform;
 SDL_Renderer* renderer;
@@ -21,6 +22,30 @@ Chip8 c8;
 
 const unsigned int screenArraySize = (Chip8::WIDTH * Chip8::HEIGHT) * (4 * sizeof(unsigned char));
 unsigned char screenArray[screenArraySize];
+
+// Keyboard layout
+// 1 2 3 4 
+// Q W E R
+// A S D F
+// Z X C V
+int keyboardLayout[16] = {
+	SDLK_x,
+	SDLK_1,
+	SDLK_2,
+	SDLK_3,
+	SDLK_q,
+	SDLK_w,
+	SDLK_e,
+	SDLK_a,
+	SDLK_s,
+	SDLK_d,
+	SDLK_z,
+	SDLK_c,
+	SDLK_4,
+	SDLK_r,
+	SDLK_f,
+	SDLK_v
+};
 
 int main(int argc, char* argv[])
 {
@@ -59,6 +84,13 @@ int main(int argc, char* argv[])
 
 	while (run)
 	{
+		//Input
+		run = eventHandler();
+
+		passThroughInput();
+
+		InputManager::update();
+
 		//Emulate Cycle
 		c8.emulateCycle();
 
@@ -69,15 +101,6 @@ int main(int argc, char* argv[])
 			render();
 		}
 
-		
-
-		//Input
-		run = eventHandler();
-
-
-
-		InputManager::update();
-
 		//Audio
 		if (c8.beepThisCycle())
 		{
@@ -86,7 +109,8 @@ int main(int argc, char* argv[])
 		}
 
 		//Not Perfect But need to try to keep cycle running 60 times a second
-		std::this_thread::sleep_for(std::chrono::microseconds(16600));
+		//std::this_thread::sleep_for(std::chrono::microseconds(16600));
+		std::this_thread::sleep_for(std::chrono::microseconds(8000));
 	}
 
 	InputManager::cleanup();
@@ -156,4 +180,12 @@ bool eventHandler()
 	}
 
 	return true;
+}
+
+void passThroughInput()
+{
+	for (int i = 0; i < 16; i++)
+	{
+		c8.setKeyState(i, InputManager::isKeyHeld(keyboardLayout[i]));
+	}
 }
